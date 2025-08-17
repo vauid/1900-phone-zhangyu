@@ -3182,11 +3182,25 @@
                 loadingBtn = true
                 try {
                     // --- 增强备份功能：同时备份 localStorage 中的预设 ---
+                    const momentsDb = new Dexie('AppDB_Moments');
+                    momentsDb.version(1).stores({
+                        moments: 'id,timestamp,commentedBy'
+                    });
+                    const momentsData = await momentsDb.moments.toArray();
                     const backupData = {
                         mainDb: db, // 核心数据
                         apiPresets: JSON.parse(localStorage.getItem('apiPresets') || '[]'),
                         bubblePresets: JSON.parse(localStorage.getItem('bubblePresets') || '[]'),
-                        myPersonaPresets: JSON.parse(localStorage.getItem('myPersonaPresets') || '[]')
+                        myPersonaPresets: JSON.parse(localStorage.getItem('myPersonaPresets') || '[]'),
+                        moments: momentsData,
+                        momentsProfile: {
+                            name: localStorage.getItem('myTopName'),
+                            id: localStorage.getItem('myTopId'),
+                            location: localStorage.getItem('myTopLoc'),
+                            signature: localStorage.getItem('myTopSignature'),
+                            avatar: localStorage.getItem('myTopAvatar'),
+                            heroBg: localStorage.getItem('myTopBg')
+                        }
                     };
                     const jsonString = JSON.stringify(backupData);
                     const dataBlob = new Blob([jsonString]);
@@ -3242,6 +3256,22 @@
                             localStorage.setItem('apiPresets', JSON.stringify(data.apiPresets || []));
                             localStorage.setItem('bubblePresets', JSON.stringify(data.bubblePresets || []));
                             localStorage.setItem('myPersonaPresets', JSON.stringify(data.myPersonaPresets || []));
+                            if (data.momentsProfile) {
+                                localStorage.setItem('myTopName', data.momentsProfile.name || '');
+                                localStorage.setItem('myTopId', data.momentsProfile.id || '');
+                                localStorage.setItem('myTopLoc', data.momentsProfile.location || '');
+                                localStorage.setItem('myTopSignature', data.momentsProfile.signature || '');
+                                localStorage.setItem('myTopAvatar', data.momentsProfile.avatar || '');
+                                localStorage.setItem('myTopBg', data.momentsProfile.heroBg || '');
+                            }
+                            if (data.moments) {
+                                const momentsDb = new Dexie('AppDB_Moments');
+                                momentsDb.version(1).stores({
+                                    moments: 'id,timestamp,commentedBy'
+                                });
+                                await momentsDb.moments.clear();
+                                await momentsDb.moments.bulkAdd(data.moments);
+                            }
                             
                             showToast(`数据和预设已成功恢复。应用即将刷新。`);
                         } else {
