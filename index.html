@@ -3181,7 +3181,14 @@
                 }
                 loadingBtn = true
                 try {
-                    const jsonString = JSON.stringify(db);
+                    // --- 增强备份功能：同时备份 localStorage 中的预设 ---
+                    const backupData = {
+                        mainDb: db, // 核心数据
+                        apiPresets: JSON.parse(localStorage.getItem('apiPresets') || '[]'),
+                        bubblePresets: JSON.parse(localStorage.getItem('bubblePresets') || '[]'),
+                        myPersonaPresets: JSON.parse(localStorage.getItem('myPersonaPresets') || '[]')
+                    };
+                    const jsonString = JSON.stringify(backupData);
                     const dataBlob = new Blob([jsonString]);
 
                     // Compress the data using Gzip
@@ -3225,8 +3232,24 @@
                         const jsonString = await new Response(decompressedStream).text();
 
                         let data = JSON.parse(jsonString);
-                        await saveData(data)
-                        showToast(`数据已成功恢复。应用即将刷新。`);
+
+                        // --- 增强导入功能：区分新旧备份格式 ---
+                        if (data && data.mainDb) {
+                            // 新格式：包含核心数据和预设
+                            await saveData(data.mainDb); // 恢复核心数据到 IndexedDB
+                            
+                            // 恢复预设到 localStorage
+                            localStorage.setItem('apiPresets', JSON.stringify(data.apiPresets || []));
+                            localStorage.setItem('bubblePresets', JSON.stringify(data.bubblePresets || []));
+                            localStorage.setItem('myPersonaPresets', JSON.stringify(data.myPersonaPresets || []));
+                            
+                            showToast(`数据和预设已成功恢复。应用即将刷新。`);
+                        } else {
+                            // 旧格式：只包含核心数据
+                            await saveData(data);
+                            showToast(`数据已成功恢复（未找到预设信息）。应用即将刷新。`);
+                        }
+                        
                         window.location.reload();
                     } catch (error) {
                         console.error("导入失败:", error);
