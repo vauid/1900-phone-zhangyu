@@ -3946,7 +3946,7 @@
             } else if (textMatch) {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-                bubbleElement.textContent = textMatch[1].trim();
+                bubbleElement.innerHTML = textMatch[1].trim();
                 if (!chat.useCustomBubbleCss) {
                     bubbleElement.style.backgroundColor = bubbleTheme.bg;
                     bubbleElement.style.color = bubbleTheme.text;
